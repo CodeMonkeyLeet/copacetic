@@ -1,0 +1,39 @@
+name: Test in DevContainer
+on:
+  workflow_dispatch:
+env:
+  DEVCON_NAME: ghcr.io/codemonkeyleet/copacetic/devcontainer
+  DEVCON_VERSION: latest
+
+jobs:
+  build:
+    name: Build and unit test
+    runs-on: ${{ matrix.os }}
+    permissions:
+      packages: write
+      contents: read
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build copa in dev container
+        uses: devcontainers/ci@v0.2
+        with:
+          imageName: ${{ env.DEVCON_NAME }}
+          imageTag: ${{ env.DEVCON_VERSION }}
+          env: |
+            CODECOV_OPTS=-coverprofile=coverage.txt -covermode=atomic
+          runCmd: |
+            set -e
+            make build
+            make test
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
